@@ -1,51 +1,18 @@
 package com.example.happybirthday
 
-import android.os.Bundle
-import androidx.activity.ComponentActivity
-import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.offset
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AccountBalanceWallet
-import androidx.compose.material.icons.filled.ArrowDownward
-import androidx.compose.material.icons.filled.ArrowForwardIos
-import androidx.compose.material.icons.filled.ArrowUpward
-import androidx.compose.material.icons.filled.Description
-import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.History
-import androidx.compose.material.icons.filled.KeyboardArrowDown
-import androidx.compose.material.icons.filled.Notifications
-import androidx.compose.material.icons.filled.Paid
-import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.PersonAddAlt1
-import androidx.compose.material.icons.filled.QrCodeScanner
-import androidx.compose.material.icons.filled.ReceiptLong
-import androidx.compose.material.icons.filled.Send
-import androidx.compose.material.icons.filled.SimCard
-import androidx.compose.material.icons.filled.SwapHoriz
-import androidx.compose.material.icons.filled.VisibilityOff
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -56,27 +23,20 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.happybirthday.ui.theme.HappyBirthdayTheme
 
-class BalanceActivity : ComponentActivity() {
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        setContent {
-            HappyBirthdayTheme {
-                Surface(
-                    modifier = Modifier.fillMaxSize(),
-                    color = MaterialTheme.colorScheme.background
-                ) {
-                    BalanceScreen()
-                }
-            }
-        }
-    }
-}
-
 @Composable
 fun BalanceScreen() {
+    // États principaux pour l'écran
+    var isBalanceVisible by remember { mutableStateOf(false) }
+    var selectedTab by remember { mutableStateOf("Home") }
+
     Scaffold(
         modifier = Modifier.fillMaxSize(),
-        bottomBar = { BottomNavigationBar() }
+        bottomBar = {
+            BottomNavigationBar(
+                selectedTab = selectedTab,
+                onTabSelected = { selectedTab = it }
+            )
+        }
     ) { paddingValues ->
         Column(
             modifier = Modifier
@@ -85,21 +45,26 @@ fun BalanceScreen() {
                 .padding(paddingValues)
                 .verticalScroll(rememberScrollState())
         ) {
-            BalanceTopSection()
+            BalanceTopSection(
+                isBalanceVisible = isBalanceVisible,
+                onToggleVisibility = { isBalanceVisible = !isBalanceVisible }
+            )
             OperationsBody()
         }
     }
 }
 
 @Composable
-fun BalanceTopSection() {
+fun BalanceTopSection(isBalanceVisible: Boolean, onToggleVisibility: () -> Unit) {
     val topBarBlue = Color(0xFF0E5BA9)
     val actionCircle = Color.White.copy(alpha = 0.10f)
     val chipColor = Color.White.copy(alpha = 0.12f)
 
+    var selectedCity by remember { mutableStateOf("Bujumbura") }
+
     Surface(
         color = topBarBlue,
-        modifier = Modifier.fillMaxWidth()
+        modifier = Modifier.fillMaxWidth(),
     ) {
         Column(
             modifier = Modifier
@@ -116,7 +81,7 @@ fun BalanceTopSection() {
                     horizontalArrangement = Arrangement.spacedBy(14.dp)
                 ) {
                     TopBarCircleAction(
-                        onClick = { },
+                        onClick = { /* Action Profil */ },
                         containerColor = actionCircle
                     ) {
                         Icon(
@@ -128,8 +93,9 @@ fun BalanceTopSection() {
                     }
 
                     LocationChip(
-                        city = "Bujumbura",
-                        containerColor = chipColor
+                        city = selectedCity,
+                        containerColor = chipColor,
+                        onCitySelected = { selectedCity = it }
                     )
                 }
 
@@ -138,7 +104,7 @@ fun BalanceTopSection() {
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     TopBarCircleAction(
-                        onClick = { },
+                        onClick = { /* Action Scanner */ },
                         containerColor = actionCircle
                     ) {
                         Icon(
@@ -151,7 +117,7 @@ fun BalanceTopSection() {
 
                     Box {
                         TopBarCircleAction(
-                            onClick = { },
+                            onClick = { /* Action Notif */ },
                             containerColor = actionCircle
                         ) {
                             Icon(
@@ -161,7 +127,6 @@ fun BalanceTopSection() {
                                 modifier = Modifier.size(24.dp)
                             )
                         }
-
                         Box(
                             modifier = Modifier
                                 .align(Alignment.TopEnd)
@@ -174,74 +139,91 @@ fun BalanceTopSection() {
             }
 
             Spacer(modifier = Modifier.height(22.dp))
-            BalanceCard()
+            BalanceCard(isVisible = isBalanceVisible, onToggle = onToggleVisibility)
         }
     }
 }
 
 @Composable
-fun BalanceCard() {
+fun LocationChip(
+    city: String,
+    containerColor: Color,
+    onCitySelected: (String) -> Unit
+) {
+    var expanded by remember { mutableStateOf(false) }
+    val cities = listOf("Bujumbura", "Gitega", "Ngozi", "Rumonge")
+
+    Box {
+        Row(
+            modifier = Modifier
+                .background(containerColor, RoundedCornerShape(22.dp))
+                .clickable { expanded = true }
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(22.dp)
+                    .background(Color.White.copy(alpha = 0.18f), RoundedCornerShape(6.dp)),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(text = city.take(1), color = Color.White, fontWeight = FontWeight.SemiBold)
+            }
+            Spacer(modifier = Modifier.width(12.dp))
+            Text(text = city, color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+            Spacer(modifier = Modifier.width(4.dp))
+            Icon(Icons.Default.KeyboardArrowDown, null, tint = Color.White)
+        }
+
+        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            cities.forEach { cityName ->
+                DropdownMenuItem(
+                    text = { Text(cityName) },
+                    onClick = {
+                        onCitySelected(cityName)
+                        expanded = false
+                    }
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun BalanceCard(isVisible: Boolean, onToggle: () -> Unit) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(24.dp),
         color = Color(0xFF2B89E0)
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 22.dp, vertical = 20.dp)
-        ) {
+        Column(modifier = Modifier.padding(22.dp)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+                horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.AccountBalanceWallet,
-                        contentDescription = "Balance",
-                        tint = Color.White.copy(alpha = 0.95f),
-                        modifier = Modifier.size(18.dp)
-                    )
-                    Text(
-                        text = "BALANCE",
-                        color = Color.White.copy(alpha = 0.92f),
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Medium
-                    )
-                }
-
+                Text("BALANCE", color = Color.White.copy(alpha = 0.9f))
                 Row(
                     modifier = Modifier
                         .background(Color.White.copy(alpha = 0.13f), RoundedCornerShape(16.dp))
+                        .clickable { onToggle() }
                         .padding(horizontal = 12.dp, vertical = 8.dp),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
                     Icon(
-                        imageVector = Icons.Default.VisibilityOff,
-                        contentDescription = "Masquer le solde",
-                        tint = Color.White.copy(alpha = 0.9f),
-                        modifier = Modifier.size(18.dp)
+                        imageVector = if (isVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
+                        contentDescription = null,
+                        tint = Color.White
                     )
-                    Text(
-                        text = "Show",
-                        color = Color.White,
-                        fontSize = 14.sp
-                    )
+                    Text(text = if (isVisible) "Hide" else "Show", color = Color.White)
                 }
             }
-
             Spacer(modifier = Modifier.height(28.dp))
             Text(
-                text = "• • • • • • • •  BIF",
+                text = if (isVisible) "1.250.000 BIF" else "• • • • • • • • BIF",
                 color = Color.White,
                 fontSize = 28.sp,
-                fontWeight = FontWeight.SemiBold,
-                letterSpacing = 1.sp
+                fontWeight = FontWeight.SemiBold
             )
         }
     }
@@ -252,308 +234,141 @@ fun OperationsBody() {
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .background(
-                color = Color(0xFFF2F4F8),
-                shape = RoundedCornerShape(topStart = 26.dp, topEnd = 26.dp)
-            )
             .padding(horizontal = 18.dp, vertical = 24.dp)
     ) {
         SectionTitle("CLIENT OPERATIONS")
         Spacer(modifier = Modifier.height(20.dp))
 
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-            OperationCard(
-                modifier = Modifier.weight(1f),
-                icon = Icons.Default.ArrowDownward,
-                title = "Dépôt"
-            )
-            OperationCard(
-                modifier = Modifier.weight(1f),
-                icon = Icons.Default.ArrowUpward,
-                title = "Retrait"
-            )
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+            OperationCard(Modifier.weight(1f), Icons.Default.ArrowDownward, "Dépôt")
+            OperationCard(Modifier.weight(1f), Icons.Default.ArrowUpward, "Retrait")
         }
-
         Spacer(modifier = Modifier.height(16.dp))
-
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-            OperationCard(
-                modifier = Modifier.weight(1f),
-                icon = Icons.Default.Send,
-                title = "Envoyer\nde l'arg..."
-            )
-            OperationCard(
-                modifier = Modifier.weight(1f),
-                icon = Icons.Default.SimCard,
-                title = "Crédit\ntélépho..."
-            )
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+            OperationCard(Modifier.weight(1f), Icons.Default.Send, "Envoyer\nde l'arg...")
+            OperationCard(Modifier.weight(1f), Icons.Default.SimCard, "Crédit\ntélépho...")
         }
-
         Spacer(modifier = Modifier.height(16.dp))
-
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-            OperationCard(
-                modifier = Modifier.weight(1f),
-                icon = Icons.Default.Description,
-                title = "Forfait de\ndonnées"
-            )
-            OperationCard(
-                modifier = Modifier.weight(1f),
-                icon = Icons.Default.ReceiptLong,
-                title = "Payer des\nfactures"
-            )
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+            OperationCard(Modifier.weight(1f), Icons.Default.Description, "Forfait de\ndonnées")
+            OperationCard(Modifier.weight(1f), Icons.Default.ReceiptLong, "Payer des\nfactures")
         }
 
         Spacer(modifier = Modifier.height(18.dp))
-
-        FullWidthActionCard(
-            icon = Icons.Default.PersonAddAlt1,
-            title = "Enregistrer un utilisateur"
-        )
-
+        FullWidthActionCard(Icons.Default.PersonAddAlt1, "Enregistrer un utilisateur")
         Spacer(modifier = Modifier.height(26.dp))
         SectionTitle("AGENT OPERATIONS")
         Spacer(modifier = Modifier.height(20.dp))
-
-        FullWidthActionCard(
-            icon = Icons.Default.SwapHoriz,
-            title = "Transferts entre agents"
-        )
-
+        FullWidthActionCard(Icons.Default.SwapHoriz, "Transferts entre agents")
         Spacer(modifier = Modifier.height(22.dp))
     }
 }
 
 @Composable
-fun SectionTitle(title: String) {
-    Text(
-        text = title,
-        color = Color(0xFF8C9099),
-        fontSize = 16.sp,
-        fontWeight = FontWeight.SemiBold,
-        letterSpacing = 1.sp
-    )
-}
-
-@Composable
-fun OperationCard(
-    modifier: Modifier = Modifier,
-    icon: ImageVector,
-    title: String
-) {
+fun OperationCard(modifier: Modifier = Modifier, icon: ImageVector, title: String) {
     Surface(
-        modifier = modifier.height(108.dp),
+        modifier = modifier.height(108.dp).clickable { /* Clic */ },
         shape = RoundedCornerShape(22.dp),
         color = Color.White,
         shadowElevation = 4.dp
     ) {
         Row(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(horizontal = 18.dp),
+            modifier = Modifier.fillMaxSize().padding(horizontal = 18.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = title,
-                tint = Color(0xFF1D66C2),
-                modifier = Modifier.size(28.dp)
-            )
-            Text(
-                text = title,
-                color = Color(0xFF111111),
-                fontSize = 15.sp,
-                fontWeight = FontWeight.SemiBold,
-                lineHeight = 20.sp
-            )
+            Icon(icon, null, tint = Color(0xFF1D66C2), modifier = Modifier.size(28.dp))
+            Text(title, color = Color(0xFF111111), fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
         }
     }
 }
 
 @Composable
-fun FullWidthActionCard(
-    icon: ImageVector,
-    title: String
-) {
+fun FullWidthActionCard(icon: ImageVector, title: String) {
     Surface(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth().clickable { /* Clic */ },
         shape = RoundedCornerShape(22.dp),
         color = Color.White,
         shadowElevation = 4.dp
     ) {
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 20.dp, vertical = 28.dp),
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 28.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = title,
-                tint = Color(0xFF2F5FD1),
-                modifier = Modifier.size(30.dp)
-            )
+            Icon(icon, null, tint = Color(0xFF2F5FD1), modifier = Modifier.size(30.dp))
             Spacer(modifier = Modifier.width(18.dp))
-            Text(
-                text = title,
-                modifier = Modifier.weight(1f),
-                color = Color(0xFF111111),
-                fontSize = 15.sp,
-                fontWeight = FontWeight.SemiBold
-            )
-            Icon(
-                imageVector = Icons.Default.ArrowForwardIos,
-                contentDescription = "Suivant",
-                tint = Color(0xFF9A9A9A),
-                modifier = Modifier.size(18.dp)
-            )
+            Text(title, Modifier.weight(1f), color = Color(0xFF111111), fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+            Icon(Icons.Default.ArrowForwardIos, null, tint = Color(0xFF9A9A9A), modifier = Modifier.size(18.dp))
         }
     }
 }
 
 @Composable
-fun BottomNavigationBar() {
+fun BottomNavigationBar(selectedTab: String, onTabSelected: (String) -> Unit) {
     Surface(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 18.dp, vertical = 12.dp),
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 12.dp),
         shape = RoundedCornerShape(28.dp),
         color = Color.White,
         shadowElevation = 8.dp
     ) {
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 10.dp, vertical = 8.dp),
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 8.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            BottomNavItem(
-                icon = Icons.Default.Home,
-                label = "Home",
-                selected = true
+            val items = listOf(
+                Icons.Default.Home to "Home",
+                Icons.Default.Paid to "Earnings",
+                Icons.Default.SwapHoriz to "History",
+                Icons.Default.AccountBalanceWallet to "My Wallet"
             )
-            BottomNavItem(
-                icon = Icons.Default.Paid,
-                label = "Earnings",
-                selected = false
-            )
-            BottomNavItem(
-                icon = Icons.Default.SwapHoriz,
-                label = "History",
-                selected = false
-            )
-            BottomNavItem(
-                icon = Icons.Default.AccountBalanceWallet,
-                label = "My Wallet",
-                selected = false
-            )
+
+            items.forEach { (icon, label) ->
+                BottomNavItem(
+                    icon = icon,
+                    label = label,
+                    selected = selectedTab == label,
+                    onClick = { onTabSelected(label) }
+                )
+            }
         }
     }
 }
 
 @Composable
-fun BottomNavItem(
-    icon: ImageVector,
-    label: String,
-    selected: Boolean
-) {
+fun BottomNavItem(icon: ImageVector, label: String, selected: Boolean, onClick: () -> Unit) {
     val selectedBg = if (selected) Color(0xFFE7EEF6) else Color.Transparent
     val selectedColor = if (selected) Color(0xFF2490FF) else Color(0xFF151515)
 
     Column(
         modifier = Modifier
             .background(selectedBg, RoundedCornerShape(22.dp))
+            .clickable { onClick() }
             .padding(horizontal = 18.dp, vertical = 10.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(4.dp)
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = label,
-            tint = selectedColor,
-            modifier = Modifier.size(28.dp)
-        )
-        Text(
-            text = label,
-            color = selectedColor,
-            fontSize = 12.sp,
-            fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal
-        )
-    }
-}
-
-@Composable
-fun TopBarCircleAction(
-    onClick: () -> Unit,
-    containerColor: Color,
-    content: @Composable () -> Unit
-) {
-    Box(
-        modifier = Modifier
-            .size(58.dp)
-            .background(containerColor, CircleShape)
-            .clickable(onClick = onClick),
-        contentAlignment = Alignment.Center
-    ) {
-        content()
-    }
-}
-
-@Composable
-fun LocationChip(
-    city: String,
-    containerColor: Color
-) {
-    Row(
-        modifier = Modifier
-            .background(containerColor, RoundedCornerShape(22.dp))
-            .clickable(onClick = { })
-            .padding(horizontal = 16.dp, vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Box(
-            modifier = Modifier
-                .size(22.dp)
-                .background(Color.White.copy(alpha = 0.18f), RoundedCornerShape(6.dp)),
-            contentAlignment = Alignment.Center
-        ) {
-            Text(
-                text = "B",
-                color = Color.White,
-                fontWeight = FontWeight.SemiBold
-            )
+        Icon(icon, null, tint = selectedColor, modifier = Modifier.size(28.dp))
+        if (selected) {
+            Text(label, color = selectedColor, fontSize = 12.sp, fontWeight = FontWeight.Bold)
         }
-        Spacer(modifier = Modifier.width(12.dp))
-        Text(
-            text = city,
-            color = Color.White,
-            fontSize = 16.sp,
-            fontWeight = FontWeight.SemiBold
-        )
-        Spacer(modifier = Modifier.width(4.dp))
-        Icon(
-            imageVector = Icons.Default.KeyboardArrowDown,
-            contentDescription = "Choisir la ville",
-            tint = Color.White
-        )
     }
 }
 
-@Preview(showBackground = true, showSystemUi = true)
+@Composable
+fun TopBarCircleAction(onClick: () -> Unit, containerColor: Color, content: @Composable () -> Unit) {
+    Box(
+        modifier = Modifier.size(52.dp).background(containerColor, CircleShape).clickable { onClick() },
+        contentAlignment = Alignment.Center
+    ) { content() }
+}
+
+@Composable
+fun SectionTitle(title: String) {
+    Text(title, color = Color(0xFF8C9099), fontSize = 14.sp, fontWeight = FontWeight.SemiBold, letterSpacing = 1.sp)
+}
+
+@Preview(showBackground = true)
 @Composable
 fun BalanceScreenPreview() {
-    HappyBirthdayTheme {
-        BalanceScreen()
-    }
+    HappyBirthdayTheme { BalanceScreen() }
 }
